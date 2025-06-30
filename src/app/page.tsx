@@ -142,7 +142,7 @@ function reducer(state: CalculatorState, action: CalculatorAction): CalculatorSt
         operator: nextOperator,
         firstOperand: newFirstOperand,
         displayValue: newDisplayValue,
-        history: `${formatNumber(newFirstOperand)} ${nextOperator}`,
+        history: `${formatNumber(newFirstOperand!)} ${nextOperator}`,
       };
     }
 
@@ -494,7 +494,13 @@ export default function CalculatorPage() {
           {buttonLayout.map((btn) => (
             <Button
               key={btn.id}
-              onClick={() => dispatch({ type: btn.type, payload: btn.payload })}
+              onClick={() => {
+                if (btn.payload !== undefined) {
+                  dispatch({ type: btn.type as any, payload: btn.payload });
+                } else {
+                  dispatch({ type: btn.type as any });
+                }
+              }}
               className={`h-20 text-3xl font-semibold rounded-full transition-all duration-150 ${getButtonClassName(btn)}`}
             >
               {btn.id === 'clear' ? getButtonText() : btn.text}
