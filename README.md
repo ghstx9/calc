@@ -14,10 +14,7 @@ Not my most impressive project but hey every web dev have made their own calcula
 
 2. **Install dependencies:**
    ```bash 
-   npm install  
-   npx shadcn@latest init  
-   npx shadcn@latest add button  
-   npm install lucide-react
+   npm install 
    ```  
 
 4. **Run it:**
