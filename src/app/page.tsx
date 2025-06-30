@@ -2,7 +2,7 @@
 
 import React, { useReducer, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, History } from 'lucide-react';
+import { RotateCcw, History, Sun, Moon, Github } from 'lucide-react';
 
 // --- state and reducer ---
 
@@ -15,6 +15,7 @@ const initialState = {
   calculationHistory: [],
   showHistory: false,
   previousResult: null,
+  isDarkMode: true,
 };
 
 function reducer(state, action) {
@@ -95,9 +96,12 @@ function reducer(state, action) {
         const result = performCalculation();
         if (!isFinite(result)) {
           return {
-            ...initialState,
+            ...state,
             displayValue: "Error",
-            calculationHistory,
+            firstOperand: null,
+            operator: null,
+            waitingForSecondOperand: false,
+            history: '',
           };
         }
         newDisplayValue = formatNumber(result);
@@ -120,20 +124,26 @@ function reducer(state, action) {
       
       if (!isFinite(result)) {
         return {
-          ...initialState,
+          ...state,
           displayValue: "Error",
-          calculationHistory,
+          firstOperand: null,
+          operator: null,
+          waitingForSecondOperand: false,
+          history: '',
         };
       }
       
       const calculation = `${formatNumber(firstOperand)} ${operator} ${displayValue} = ${formatNumber(result)}`;
       
       return {
-        ...initialState,
+        ...state,
         displayValue: formatNumber(result),
         history: calculation,
         previousResult: result,
-        calculationHistory: [calculation, ...calculationHistory.slice(0, 19)], // Keep last 20
+        calculationHistory: [calculation, ...calculationHistory.slice(0, 19)],
+        firstOperand: null,
+        operator: null,
+        waitingForSecondOperand: false,
       };
     }
 
@@ -149,8 +159,12 @@ function reducer(state, action) {
 
     case 'ALL_CLEAR':
       return {
-        ...initialState,
-        calculationHistory,
+        ...state,
+        displayValue: '0',
+        firstOperand: null,
+        operator: null,
+        waitingForSecondOperand: false,
+        history: '',
       };
 
     case 'TOGGLE_SIGN':
@@ -196,6 +210,12 @@ function reducer(state, action) {
         showHistory: false,
       };
 
+    case 'TOGGLE_THEME':
+      return {
+        ...state,
+        isDarkMode: !state.isDarkMode,
+      };
+
     default:
       return state;
   }
@@ -203,27 +223,33 @@ function reducer(state, action) {
 
 // --- button layout ---
 
-const buttonLayout = [
-    { id: 'clear', text: 'AC', type: 'CLEAR', className: 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' },
-    { id: 'toggle-sign', text: '+/-', type: 'TOGGLE_SIGN', className: 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' },
-    { id: 'percent', text: '%', type: 'INPUT_PERCENT', className: 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' },
-    { id: 'divide', text: '÷', type: 'CHOOSE_OPERATOR', payload: '/', className: 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' },
-    { id: 'seven', text: '7', type: 'INPUT_DIGIT', payload: 7, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'eight', text: '8', type: 'INPUT_DIGIT', payload: 8, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'nine', text: '9', type: 'INPUT_DIGIT', payload: 9, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'multiply', text: '×', type: 'CHOOSE_OPERATOR', payload: '*', className: 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' },
-    { id: 'four', text: '4', type: 'INPUT_DIGIT', payload: 4, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'five', text: '5', type: 'INPUT_DIGIT', payload: 5, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'six', text: '6', type: 'INPUT_DIGIT', payload: 6, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'subtract', text: '-', type: 'CHOOSE_OPERATOR', payload: '-', className: 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' },
-    { id: 'one', text: '1', type: 'INPUT_DIGIT', payload: 1, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'two', text: '2', type: 'INPUT_DIGIT', payload: 2, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'three', text: '3', type: 'INPUT_DIGIT', payload: 3, className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'add', text: '+', type: 'CHOOSE_OPERATOR', payload: '+', className: 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' },
-    { id: 'zero', text: '0', type: 'INPUT_DIGIT', payload: 0, className: 'col-span-2 justify-start pl-8 bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'decimal', text: '.', type: 'INPUT_DECIMAL', className: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' },
-    { id: 'equals', text: '=', type: 'CALCULATE', className: 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' },
-];
+const getButtonLayout = (isDarkMode) => {
+    const lightModeClass = 'bg-black text-white hover:bg-gray-800 active:bg-gray-700';
+    const lightModeOperatorClass = 'bg-blue-500 text-white hover:bg-blue-400 active:bg-blue-600';
+    const lightModeSpecialClass = 'bg-gray-600 text-white hover:bg-gray-500 active:bg-gray-700';
+
+    return [
+        { id: 'clear', text: 'AC', type: 'CLEAR', className: isDarkMode ? 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' : lightModeSpecialClass },
+        { id: 'toggle-sign', text: '+/-', type: 'TOGGLE_SIGN', className: isDarkMode ? 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' : lightModeSpecialClass },
+        { id: 'percent', text: '%', type: 'INPUT_PERCENT', className: isDarkMode ? 'bg-gray-400 text-black hover:bg-gray-300 active:bg-gray-500' : lightModeSpecialClass },
+        { id: 'divide', text: '÷', type: 'CHOOSE_OPERATOR', payload: '/', className: isDarkMode ? 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' : lightModeOperatorClass },
+        { id: 'seven', text: '7', type: 'INPUT_DIGIT', payload: 7, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'eight', text: '8', type: 'INPUT_DIGIT', payload: 8, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'nine', text: '9', type: 'INPUT_DIGIT', payload: 9, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'multiply', text: '×', type: 'CHOOSE_OPERATOR', payload: '*', className: isDarkMode ? 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' : lightModeOperatorClass },
+        { id: 'four', text: '4', type: 'INPUT_DIGIT', payload: 4, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'five', text: '5', type: 'INPUT_DIGIT', payload: 5, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'six', text: '6', type: 'INPUT_DIGIT', payload: 6, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'subtract', text: '-', type: 'CHOOSE_OPERATOR', payload: '-', className: isDarkMode ? 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' : lightModeOperatorClass },
+        { id: 'one', text: '1', type: 'INPUT_DIGIT', payload: 1, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'two', text: '2', type: 'INPUT_DIGIT', payload: 2, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'three', text: '3', type: 'INPUT_DIGIT', payload: 3, className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'add', text: '+', type: 'CHOOSE_OPERATOR', payload: '+', className: isDarkMode ? 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' : lightModeOperatorClass },
+        { id: 'zero', text: '0', type: 'INPUT_DIGIT', payload: 0, className: `col-span-2 justify-start pl-8 ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass}` },
+        { id: 'decimal', text: '.', type: 'INPUT_DECIMAL', className: isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-800' : lightModeClass },
+        { id: 'equals', text: '=', type: 'CALCULATE', className: isDarkMode ? 'bg-yellow-500 text-white hover:bg-yellow-400 active:bg-yellow-600' : lightModeOperatorClass },
+    ];
+}
 
 export default function CalculatorPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -311,36 +337,59 @@ export default function CalculatorPage() {
     }
     
     if (btn.type === 'CHOOSE_OPERATOR' && btn.payload === state.operator && state.waitingForSecondOperand) {
-      className = className.replace('bg-yellow-500', 'bg-white text-yellow-500');
+      if (state.isDarkMode) {
+        className = className.replace('bg-yellow-500', 'bg-white text-yellow-500');
+      } else {
+        // When an operator is active in light mode, give it a distinct style
+        className = 'bg-white text-blue-500';
+      }
     }
     
     return className;
   };
 
+  const buttonLayout = getButtonLayout(state.isDarkMode);
+
   return (
-    <main className="bg-black min-h-screen flex items-center justify-center p-4">
+    <main className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
+      state.isDarkMode ? 'bg-black' : 'bg-gray-50'
+    }`}>
       <div className="w-full max-w-sm mx-auto space-y-4 font-sans">
         {/* recent panel */}
         {state.showHistory && (
-          <div className="bg-gray-900 rounded-2xl p-4 max-h-64 overflow-y-auto">
+          <div className={`rounded-2xl p-4 max-h-64 overflow-y-auto transition-colors duration-300 ${
+            state.isDarkMode ? 'bg-gray-900' : 'bg-white border border-gray-200 shadow-lg'
+          }`}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-white text-lg font-medium">History</h3>
+              <h3 className={`text-lg font-medium ${state.isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                History
+              </h3>
               <Button
                 onClick={() => dispatch({ type: 'CLEAR_HISTORY' })}
-                className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 h-auto"
+                className={`text-xs px-3 py-1 h-auto transition-colors duration-300 ${
+                  state.isDarkMode 
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                    : 'bg-black hover:bg-gray-800 text-white'
+                }`}
               >
                 Clear All
               </Button>
             </div>
             {state.calculationHistory.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">No calculations yet</p>
+              <p className={`text-center py-4 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                No calculations yet
+              </p>
             ) : (
               <div className="space-y-2">
                 {state.calculationHistory.map((calc, index) => (
                   <div
                     key={index}
                     onClick={() => dispatch({ type: 'USE_HISTORY_VALUE', payload: calc })}
-                    className="text-gray-300 text-sm p-2 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors"
+                    className={`text-sm p-2 rounded-lg cursor-pointer transition-colors ${
+                      state.isDarkMode 
+                        ? 'text-gray-300 hover:bg-gray-800' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   >
                     {calc}
                   </div>
@@ -354,21 +403,47 @@ export default function CalculatorPage() {
         <div className="flex justify-between">
           <Button
             onClick={() => dispatch({ type: 'TOGGLE_HISTORY' })}
-            className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full"
+            className={`p-3 rounded-full transition-colors duration-300 ${
+              state.isDarkMode 
+                ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                : 'bg-black hover:bg-gray-800 text-white'
+            }`}
           >
             <History size={20} />
           </Button>
+          
+          <Button
+            onClick={() => dispatch({ type: 'TOGGLE_THEME' })}
+            className={`p-3 rounded-full transition-colors duration-300 ${
+              state.isDarkMode 
+                ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                : 'bg-black hover:bg-gray-800 text-white'
+            }`}
+          >
+            {state.isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </Button>
+          
           <Button
             onClick={() => dispatch({ type: 'ALL_CLEAR' })}
-            className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full"
+            className={`p-3 rounded-full transition-colors duration-300 ${
+              state.isDarkMode 
+                ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                : 'bg-black hover:bg-gray-800 text-white'
+            }`}
           >
             <RotateCcw size={20} />
           </Button>
         </div>
 
-        {/* dsply */}
-        <div className="text-white text-right space-y-2 bg-gray-900 rounded-2xl p-6">
-          <div className="text-gray-400 font-light h-6 text-lg">{state.history}</div>
+        {/* display */}
+        <div className={`text-right space-y-2 rounded-2xl p-6 transition-colors duration-300 ${
+          state.isDarkMode 
+            ? 'text-white bg-gray-900' 
+            : 'text-gray-900 bg-white border border-gray-200 shadow-lg'
+        }`}>
+          <div className={`font-light h-6 text-lg ${state.isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            {state.history}
+          </div>
           <div 
             ref={displayRef}
             className="font-light break-words min-h-[80px] flex items-end justify-end transition-all duration-200"
@@ -391,12 +466,32 @@ export default function CalculatorPage() {
           ))}
         </div>
 
-        {/* kb intsructions */}
-        <div className="text-gray-600 text-xs text-center space-y-1">
+        {/* keyboard instructions */}
+        <div className={`text-xs text-center space-y-1 transition-colors duration-300 ${
+          state.isDarkMode ? 'text-gray-600' : 'text-gray-500'
+        }`}>
           <p>Keyboard shortcuts: Numbers, operators, Enter/= (calculate)</p>
           <p>Backspace (delete), Delete (clear), Esc (all clear)</p>
         </div>
       </div>
+
+      {/* github on bottom right */}
+      <a
+        href="https://github.com/ghstx9"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-10"
+      >
+        <Button
+          className={`p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${
+            state.isDarkMode 
+              ? 'bg-gray-800 hover:bg-gray-700 text-white shadow-gray-900/50' 
+              : 'bg-white hover:bg-gray-50 text-gray-900 shadow-gray-500/20 border border-gray-200'
+          }`}
+        >
+          <Github size={24} />
+        </Button>
+      </a>
     </main>
   );
 }
