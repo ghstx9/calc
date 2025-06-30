@@ -489,16 +489,16 @@ export default function CalculatorPage() {
           </div>
         </div>
 
-        {/* button grid */}
+        {/* Button Grid */}
         <div className="grid grid-cols-4 gap-3">
           {buttonLayout.map((btn) => (
             <Button
               key={btn.id}
               onClick={() => {
                 if (btn.payload !== undefined) {
-                  dispatch({ type: btn.type as any, payload: btn.payload });
+                  dispatch({ type: btn.type, payload: btn.payload } as CalculatorAction);
                 } else {
-                  dispatch({ type: btn.type as any });
+                  dispatch({ type: btn.type } as CalculatorAction);
                 }
               }}
               className={`h-20 text-3xl font-semibold rounded-full transition-all duration-150 ${getButtonClassName(btn)}`}
