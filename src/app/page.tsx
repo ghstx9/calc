@@ -4,9 +4,37 @@ import React, { useReducer, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, History, Sun, Moon, Github } from 'lucide-react';
 
+// --- types ---
+interface CalculatorState {
+  displayValue: string;
+  firstOperand: number | null;
+  operator: string | null;
+  waitingForSecondOperand: boolean;
+  history: string;
+  calculationHistory: string[];
+  showHistory: boolean;
+  previousResult: number | null;
+  isDarkMode: boolean;
+}
+
+type CalculatorAction = 
+  | { type: 'INPUT_DIGIT'; payload: number }
+  | { type: 'INPUT_DECIMAL' }
+  | { type: 'CHOOSE_OPERATOR'; payload: string }
+  | { type: 'CALCULATE' }
+  | { type: 'CLEAR' }
+  | { type: 'ALL_CLEAR' }
+  | { type: 'TOGGLE_SIGN' }
+  | { type: 'INPUT_PERCENT' }
+  | { type: 'BACKSPACE' }
+  | { type: 'TOGGLE_HISTORY' }
+  | { type: 'CLEAR_HISTORY' }
+  | { type: 'USE_HISTORY_VALUE'; payload: string }
+  | { type: 'TOGGLE_THEME' };
+
 // --- state and reducer ---
 
-const initialState = {
+const initialState: CalculatorState = {
   displayValue: '0',
   firstOperand: null,
   operator: null,
@@ -18,13 +46,13 @@ const initialState = {
   isDarkMode: true,
 };
 
-function reducer(state, action) {
+function reducer(state: CalculatorState, action: CalculatorAction): CalculatorState {
   const { displayValue, firstOperand, operator, waitingForSecondOperand, calculationHistory } = state;
   const inputValue = parseFloat(displayValue);
 
-  const performCalculation = () => {
+  const performCalculation = (): number => {
     if (firstOperand == null || operator == null) return inputValue;
-    const calculations = {
+    const calculations: { [key: string]: (first: number, second: number) => number } = {
       '/': (first, second) => {
         if (second === 0) return NaN;
         return first / second;
@@ -36,7 +64,7 @@ function reducer(state, action) {
     return calculations[operator](firstOperand, inputValue);
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = (num: number): string => {
     if (!isFinite(num)) return 'Error';
     
     if (Math.abs(num) >= 1e15 || (Math.abs(num) < 1e-6 && num !== 0)) {
@@ -133,7 +161,7 @@ function reducer(state, action) {
         };
       }
       
-      const calculation = `${formatNumber(firstOperand)} ${operator} ${displayValue} = ${formatNumber(result)}`;
+      const calculation = `${formatNumber(firstOperand!)} ${operator} ${displayValue} = ${formatNumber(result)}`;
       
       return {
         ...state,
@@ -223,7 +251,15 @@ function reducer(state, action) {
 
 // --- button layout ---
 
-const getButtonLayout = (isDarkMode) => {
+interface ButtonConfig {
+  id: string;
+  text: string;
+  type: CalculatorAction['type'];
+  payload?: string | number;
+  className: string;
+}
+
+const getButtonLayout = (isDarkMode: boolean): ButtonConfig[] => {
     const lightModeClass = 'bg-black text-white hover:bg-gray-800 active:bg-gray-700';
     const lightModeOperatorClass = 'bg-blue-500 text-white hover:bg-blue-400 active:bg-blue-600';
     const lightModeSpecialClass = 'bg-gray-600 text-white hover:bg-gray-500 active:bg-gray-700';
@@ -253,12 +289,12 @@ const getButtonLayout = (isDarkMode) => {
 
 export default function CalculatorPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const displayRef = useRef(null);
-  const [pressedKey, setPressedKey] = useState(null);
+  const displayRef = useRef<HTMLDivElement>(null);
+  const [pressedKey, setPressedKey] = useState<string | null>(null);
 
   // --- kb support ---
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       const { key } = event;
       
       setPressedKey(key);
@@ -317,16 +353,16 @@ export default function CalculatorPage() {
     }
   }, [state.displayValue]);
 
-  const getButtonText = () => {
+  const getButtonText = (): string => {
     if (state.displayValue === '0' && state.firstOperand === null && state.history === '') return 'AC';
     return 'C';
   };
 
-  const getButtonClassName = (btn) => {
+  const getButtonClassName = (btn: ButtonConfig): string => {
     let className = btn.className;
     
     if (pressedKey !== null) {
-      if ((btn.type === 'INPUT_DIGIT' && pressedKey === btn.payload.toString()) ||
+      if ((btn.type === 'INPUT_DIGIT' && pressedKey === btn.payload?.toString()) ||
           (btn.type === 'CHOOSE_OPERATOR' && pressedKey === btn.payload) ||
           (btn.type === 'CALCULATE' && (pressedKey === 'Enter' || pressedKey === '=')) ||
           (btn.type === 'INPUT_DECIMAL' && pressedKey === '.') ||
