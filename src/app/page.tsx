@@ -1,103 +1,146 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+
+export default function CalculatorPage() {
+  const [displayValue, setDisplayValue] = useState('0');
+  const [firstOperand, setFirstOperand] = useState(null);
+  const [operator, setOperator] = useState(null);
+  const [waitingForSecondOperand, setWaitingForSecondOperand] = useState(false);
+
+  const inputDigit = (digit) => {
+    if (waitingForSecondOperand) {
+      setDisplayValue(String(digit));
+      setWaitingForSecondOperand(false);
+    } else {
+      setDisplayValue(displayValue === '0' ? String(digit) : displayValue + digit);
+    }
+  };
+  
+  const inputDecimal = () => {
+    if (waitingForSecondOperand) {
+        setDisplayValue('0.');
+        setWaitingForSecondOperand(false);
+        return;
+    }
+    if (!displayValue.includes('.')) {
+      setDisplayValue(displayValue + '.');
+    }
+  };
+
+  const handleOperator = (nextOperator) => {
+    const inputValue = parseFloat(displayValue);
+
+    if (operator && waitingForSecondOperand) {
+      setOperator(nextOperator);
+      return;
+    }
+
+    if (firstOperand === null) {
+      setFirstOperand(inputValue);
+    } else if (operator) {
+      const result = performCalculation();
+
+      if (!isFinite(result)) {
+        setDisplayValue("Error");
+      } else {
+        setDisplayValue(String(result));
+      }
+      setFirstOperand(result);
+    }
+
+    if (nextOperator === '=') {
+        setFirstOperand(null);
+    }
+
+    setWaitingForSecondOperand(true);
+    setOperator(nextOperator);
+  };
+
+
+  const performCalculation = () => {
+    const inputValue = parseFloat(displayValue);
+    if (firstOperand == null || operator == null) return inputValue;
+    
+    const calculations = {
+      '/': (first, second) => first / second,
+      '*': (first, second) => first * second,
+      '+': (first, second) => first + second,
+      '-': (first, second) => first - second,
+      '=': (first, second) => second,
+    };
+
+    return calculations[operator](firstOperand, inputValue);
+  };
+  
+
+  const clearAll = () => {
+    setDisplayValue('0');
+    setFirstOperand(null);
+    setOperator(null);
+    setWaitingForSecondOperand(false);
+  };
+
+
+  const toggleSign = () => {
+    const currentValue = parseFloat(displayValue);
+    if (currentValue === 0) return;
+    setDisplayValue(String(currentValue * -1));
+  };
+  
+
+  const inputPercent = () => {
+    const currentValue = parseFloat(displayValue);
+    if (currentValue === 0) return;
+    setDisplayValue(String(currentValue / 100));
+  };
+
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <main className="bg-black min-h-screen flex items-end">
+      <div className="w-full max-w-md mx-auto p-4 space-y-4">
+        {/* display */}
+        <div className="bg-black text-white text-right p-4 rounded-lg">
+           <h1 className="font-light text-6xl md:text-8xl break-words min-h-[72px] md:min-h-[96px] flex items-end justify-end">
+             {displayValue}
+           </h1>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        {/* btn grid */}
+        <div className="grid grid-cols-4 gap-3">
+          {/* row 1 */}
+          <Button onClick={clearAll} className="h-20 text-3xl font-semibold rounded-full bg-gray-400 text-black hover:bg-gray-300">AC</Button>
+          <Button onClick={toggleSign} className="h-20 text-3xl font-semibold rounded-full bg-gray-400 text-black hover:bg-gray-300">+/-</Button>
+          <Button onClick={inputPercent} className="h-20 text-3xl font-semibold rounded-full bg-gray-400 text-black hover:bg-gray-300">%</Button>
+          <Button onClick={() => handleOperator('/')} className="h-20 text-3xl font-semibold rounded-full bg-yellow-500 text-white hover:bg-yellow-400">÷</Button>
+
+          {/* row 2 */}
+          <Button onClick={() => inputDigit(7)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">7</Button>
+          <Button onClick={() => inputDigit(8)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">8</Button>
+          <Button onClick={() => inputDigit(9)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">9</Button>
+          <Button onClick={() => handleOperator('*')} className="h-20 text-3xl font-semibold rounded-full bg-yellow-500 text-white hover:bg-yellow-400">×</Button>
+
+          {/* row 3 */}
+          <Button onClick={() => inputDigit(4)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">4</Button>
+          <Button onClick={() => inputDigit(5)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">5</Button>
+          <Button onClick={() => inputDigit(6)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">6</Button>
+          <Button onClick={() => handleOperator('-')} className="h-20 text-3xl font-semibold rounded-full bg-yellow-500 text-white hover:bg-yellow-400">-</Button>
+
+          {/* row 4 */}
+          <Button onClick={() => inputDigit(1)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">1</Button>
+          <Button onClick={() => inputDigit(2)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">2</Button>
+          <Button onClick={() => inputDigit(3)} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">3</Button>
+          <Button onClick={() => handleOperator('+')} className="h-20 text-3xl font-semibold rounded-full bg-yellow-500 text-white hover:bg-yellow-400">+</Button>
+          
+          {/* row 5 */}
+          <div className="col-span-2">
+            <Button onClick={() => inputDigit(0)} className="h-20 w-full justify-start pl-8 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">0</Button>
+          </div>
+          <Button onClick={inputDecimal} className="h-20 text-3xl font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600">.</Button>
+          <Button onClick={() => handleOperator('=')} className="h-20 text-3xl font-semibold rounded-full bg-yellow-500 text-white hover:bg-yellow-400">=</Button>
+        </div>
+      </div>
+    </main>
   );
 }
